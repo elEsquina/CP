@@ -11,7 +11,7 @@ class SegmentTree {
         n = 1;
         while (n < size)
             n *= 2; 
-        skylineHeight = vector<pair<int, int>>(4*n, {0,0});
+        skylineHeight = vector<pair<int, int>>(2*n, {0,0});
     }
 
     int sum(int i, int l, int r, int h, int treeL, int treeR) {
@@ -32,6 +32,7 @@ class SegmentTree {
         // no overlap
         if (l >= treeR || r <= treeL)
             return;
+            
         // update max height of building i's skyline
         skylineHeight[i].second = max(skylineHeight[i].second, h);
 

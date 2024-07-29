@@ -65,12 +65,9 @@ int main() {
         g.colorGraph(1, colors);
 
         for (int i = 1; i <= n; i++) {
-            cout << colors[i] << " ";
             if (colors[i] == 1)
                 optimal.push_back(i);
         }
-        cout << endl;
-
         cout << optimal.size() << endl;
         for (auto elem : optimal) {
             cout << elem << " ";

@@ -1,21 +1,27 @@
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
 using namespace std;
 
 void printVect(vector<int> v) {
-    for (auto elem:v)
-        cout << elem << " ";
-    cout << endl;
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        cout << *it;
+        if (it != v.end() - 1) {
+            cout << " ";
+        } else
+            cout << endl;
+    }
 }
 
 class Graph {
    public:
     int size;
     vector<vector<int>> adj;
+
     Graph(int n) {
-        size = n;
-        adj = vector<vector<int>>(size + 1, vector<int>(0));
+        size = n + 1;
+        adj = vector<vector<int>>(size, vector<int>(0));
     }
 
     void addEdge(int start, int end) {
@@ -23,28 +29,35 @@ class Graph {
         adj[end].push_back(start);
     }
 
-    bool noColoredNeighbours(int n, int color, vector<int> colors) {
-        for (auto neighbour : adj[n]) {
-            if (colors[neighbour] == color) 
-                return false;
-        }
-        return true;
-    }
-
-    bool colorGraph(int n, vector<int> &optimalColor) {
-        if (n == size + 1) 
-            return true;
-    
-        for (int c = 0; c < 2; c++) {
-            if (noColoredNeighbours(n, c, optimalColor)) {
-                optimalColor[n] = c;
-                if (colorGraph(n + 1, optimalColor))
-                    return true;
-                optimalColor[n] = -1;
+    void Backtracking(int u, vector<int> tmp, vector<int>& result, vector<int>& color) {
+        vector<int> save;
+        color[u] = -1;
+        tmp.push_back(u);
+        for (auto elem : adj[u]) {
+            if (color[elem] == 0) {
+                color[elem] = 1;
+                save.push_back(elem);
             }
         }
-
-        return false;
+        bool found = false;
+        for (int v = u + 1; v < size; v++)
+            if (color[v] == 0) {
+                Backtracking(v, tmp, result, color);
+                found = true;
+                break;
+            }
+        if (!found && result.size() < tmp.size())
+            result = tmp;
+        for (auto saved: save)
+            color[saved] = 0;
+        color[u] = 1;
+        tmp.pop_back();
+        for (int v = u + 1; v < size; v++)
+            if (color[v] == 0) {
+                Backtracking(v, tmp, result, color);
+                break;
+            }
+        color[u] = 0;
     }
 };
 
@@ -60,19 +73,12 @@ int main() {
             cin >> e1 >> e2;
             g.addEdge(e1, e2);
         }
-        vector<int> colors(n + 1, -1);
-        vector<int> optimal;
-        g.colorGraph(1, colors);
+        vector<int> result;
+        vector<int> color(g.size);
+        g.Backtracking(1, result, result, color);
 
-        for (int i = 1; i <= n; i++) {
-            if (colors[i] == 1)
-                optimal.push_back(i);
-        }
-        cout << optimal.size() << endl;
-        for (auto elem : optimal) {
-            cout << elem << " ";
-        }
-        cout << endl;
+        cout << result.size() << endl;
+        printVect(result);
     }
 
     return EXIT_SUCCESS;

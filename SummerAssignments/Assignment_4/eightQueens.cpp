@@ -1,32 +1,56 @@
 #include <iostream>
-#include <string>
 #include <vector>
+#include <cmath>
+#include <limits>
 
 using namespace std;
 
-bool is_safe(int row, int col, vector<int>& grid) {
-    
-
+bool isSafe(vector<int>& grid, int row, int col) {
+    for (int i = 0; i < row; i++) {
+        if (grid[i] == col || abs(row - i) == abs(col - grid[i]))
+            return false;
+    }
     return true;
 }
 
-int solve(int n, vector<int>& grid) {
-    
+int getMoves(const vector<int>& originalGrid, const vector<int>& solvedGrid) {
+    int moves = 0;
+    for (int i = 0; i < 8; i++) {
+        if (originalGrid[i] != solvedGrid[i])
+            moves++;
+    }
+    return moves;
+}
+
+void solve(vector<int>& grid, const vector<int>& unsolved, int row, int& minMoves) {
+    if (row == 8) {
+        minMoves = min(minMoves, getMoves(unsolved, grid));
+        return;
+    }
+    for (int col = 0; col < 8; col++) {
+        if (isSafe(grid, row, col)) {
+            grid[row] = col;
+            solve(grid, unsolved, row + 1, minMoves);
+        }
+    }
 }
 
 int main() {
-    vector<int> grid;
-    int moves;
+    vector<int> grid(8);
+    int caseNumber = 0;
 
-    for(int i = 1; i < 1001; i++) {
-        moves = 0;
-        for (int j = 0; j < 8; j++) {
+    while (cin >> grid[0]) {
+        for (int j = 1; j < 8; j++)
             cin >> grid[j];
-        }
+        for (int j = 0; j < 8; j++)
+            grid[j]--;
 
-        cout << "Case " << i << " : " << moves << endl;
+        int minMoves = numeric_limits<int>::max();
+        vector<int> initialGrid = grid; 
+        solve(grid, initialGrid, 0, minMoves);
+
+        cout << "Case " << ++caseNumber << ": " << minMoves << endl;
     }
     
-
     return EXIT_SUCCESS;
 }

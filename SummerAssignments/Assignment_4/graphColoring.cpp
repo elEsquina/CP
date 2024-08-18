@@ -46,6 +46,7 @@ class Graph {
                 found = true;
                 break;
             }
+            
         if (!found && result.size() < tmp.size())
             result = tmp;
         for (auto saved: save)

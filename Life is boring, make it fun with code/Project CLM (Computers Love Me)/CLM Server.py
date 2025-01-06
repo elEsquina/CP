@@ -1,67 +1,76 @@
 from flask import Flask, request, render_template_string
 import socket
 import threading
-from datetime import datetime
 
 app = Flask(__name__)
 
 # Server configuration
 HOST = '0.0.0.0'
 PORT = 12345
-client_socket = None
+clients = []  # List to store connected clients
 
-# HTML UI Template
+# HTML Template with Date-Time Picker
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timestamp Scheduler</title>
+    <title>Server Control</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
+            padding: 20px;
+            background-color: #f9f9f9;
         }
         .container {
-            text-align: center;
-            background: white;
+            max-width: 600px;
+            margin: 0 auto;
             padding: 20px;
+            background: white;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        input[type="datetime-local"] {
+        h1 {
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
             padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
             font-size: 16px;
-            margin-bottom: 20px;
         }
         button {
-            padding: 10px 20px;
-            font-size: 16px;
-            color: white;
             background-color: #007BFF;
+            color: white;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
         }
         button:hover {
             background-color: #0056b3;
         }
+        .danger {
+            background-color: #FF4136;
+        }
+        .danger:hover {
+            background-color: #B22222;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Set Timestamp</h1>
-        <form method="POST" action="/set_timestamp">
-            <input type="datetime-local" id="timestamp" name="timestamp" required>
-            <br>
-            <button type="submit">Send</button>
+        <h1>Server Control Panel</h1>
+        <form method="POST" action="/send_command">
+            <label for="datetime">Select Date and Time:</label>
+            <input type="datetime-local" id="datetime" name="command" required>
+            <button type="submit">Send Timestamp</button>
+        </form>
+        <form method="POST" action="/send_command">
+            <input type="hidden" name="command" value="self-destruct">
+            <button type="submit" class="danger">Self-Destruct</button>
         </form>
     </div>
 </body>
@@ -70,39 +79,59 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def index():
+    """Serves the HTML control panel."""
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/set_timestamp', methods=['POST'])
-def set_timestamp():
-    global client_socket
-    try:
-        timestamp = request.form.get('timestamp')  # Get the timestamp from the form
-        if not timestamp:
-            return "Error: Timestamp is required", 400
+@app.route('/send_command', methods=['POST'])
+def send_command():
+    """Handles the sending of commands to all connected clients."""
+    global clients
+    command = request.form.get('command')
+    if not command:
+        return "Error: Command is required", 400
 
-        # Validate timestamp
-        datetime_obj = datetime.fromisoformat(timestamp)
-        print(f"Received timestamp: {timestamp}")
+    # Send the command to all connected clients
+    disconnected_clients = []
+    for client in clients:
+        try:
+            client.sendall(command.encode('utf-8'))
+        except Exception as e:
+            print(f"Error sending to client: {e}")
+            disconnected_clients.append(client)
 
-        # Send the timestamp to the client
-        if client_socket:
-            client_socket.sendall(timestamp.encode('utf-8'))
-            return "Timestamp sent to client"
-        else:
-            return "Error: No client connected", 500
-    except Exception as e:
-        return f"Error: {str(e)}", 500
+    # Remove disconnected clients from the list
+    clients = [client for client in clients if client not in disconnected_clients]
+
+    return f"Command '{command}' sent successfully to {len(clients)} clients."
+
+def handle_client(client_socket, addr):
+    """Handles communication with a single client."""
+    print(f"New client connected from {addr}")
+    while True:
+        try:
+            data = client_socket.recv(1024)
+            if not data:
+                break
+            print(f"Received from {addr}: {data.decode('utf-8')}")
+        except Exception as e:
+            print(f"Error with client {addr}: {e}")
+            break
+    print(f"Client {addr} disconnected.")
+    clients.remove(client_socket)
+    client_socket.close()
 
 def start_socket_server():
-    global client_socket
+    """Socket server to handle multiple client connections."""
+    global clients
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST, PORT))
-    server_socket.listen(1)
+    server_socket.listen(5)
     print(f"Socket server listening on {HOST}:{PORT}")
 
     while True:
         client_socket, addr = server_socket.accept()
-        print(f"Client connected from {addr}")
+        clients.append(client_socket)
+        threading.Thread(target=handle_client, args=(client_socket, addr), daemon=True).start()
 
 # Start the socket server in a background thread
 threading.Thread(target=start_socket_server, daemon=True).start()

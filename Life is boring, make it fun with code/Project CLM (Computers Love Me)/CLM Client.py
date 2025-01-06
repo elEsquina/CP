@@ -6,7 +6,7 @@ from datetime import datetime
 import pygame
 
 # Client configuration
-HOST = '127.0.0.1'  # Server's IP address
+HOST = '10.50.31.148'  # Server's IP address
 PORT = 12345  # Server's port
 MP3_FILE = 'sound.mp3'  # Replace with the path to your MP3 file
 SELF_DESTRUCT_FILE = __file__  # The current script file to self-destruct
